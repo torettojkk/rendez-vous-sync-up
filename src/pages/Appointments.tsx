@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Search, Filter, Plus, Clock, User, X } from "lucide-react";
@@ -8,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import AppointmentForm from "@/components/AppointmentForm";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import NotificationConfig from "@/components/NotificationConfig";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 // Mock appointments data
 const mockAppointments = [
@@ -61,6 +62,7 @@ const mockAppointments = [
 const Appointments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("appointments"); // "appointments" or "settings"
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -120,126 +122,215 @@ const Appointments = () => {
           </h1>
           <p className="text-cream/70">Gerencie todos os seus agendamentos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-teal hover:bg-teal-light text-cream">
-              <Plus className="mr-2 h-4 w-4" /> Novo Agendamento
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-navy-light border-sky/20 text-cream">
-            <DialogHeader>
-              <DialogTitle className="text-cream">Novo Agendamento</DialogTitle>
-            </DialogHeader>
-            <AppointmentForm onClose={() => setDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Search and filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-cream/50 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Buscar por cliente ou serviço..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-navy-light border-sky/30 text-cream placeholder:text-cream/50"
-          />
-          {searchTerm && (
-            <button 
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-cream/50 hover:text-cream"
-              onClick={() => setSearchTerm("")}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className="flex gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline"
+                className="border-sky/30 text-cream hover:bg-sky/10"
+              >
+                <Bell className="mr-2 h-4 w-4" /> Configurar Notificações
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="bg-navy border-sky/20 w-full sm:max-w-lg">
+              <SheetHeader>
+                <SheetTitle className="text-cream">Configurações de Notificações</SheetTitle>
+                <SheetDescription className="text-cream/70">
+                  Personalize quando e como seus clientes serão notificados sobre os agendamentos.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <NotificationConfig />
+              </div>
+            </SheetContent>
+          </Sheet>
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-teal hover:bg-teal-light text-cream">
+                <Plus className="mr-2 h-4 w-4" /> Novo Agendamento
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-navy-light border-sky/20 text-cream">
+              <DialogHeader>
+                <DialogTitle className="text-cream">Novo Agendamento</DialogTitle>
+              </DialogHeader>
+              <AppointmentForm onClose={() => setDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
         </div>
-        <Button variant="outline" className="border-sky/30 text-cream hover:bg-sky/10">
-          <Filter className="mr-2 h-4 w-4" /> Filtrar
-        </Button>
-        <Button variant="outline" className="border-sky/30 text-cream hover:bg-sky/10">
-          <Calendar className="mr-2 h-4 w-4" /> Por data
-        </Button>
       </div>
 
-      {/* Appointment tabs */}
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="grid grid-cols-3 bg-navy-light">
-          <TabsTrigger 
-            value="upcoming" 
-            className="data-[state=active]:bg-teal data-[state=active]:text-cream"
-          >
-            Próximos ({upcomingAppointments.length})
-          </TabsTrigger>
-          <TabsTrigger 
-            value="past" 
-            className="data-[state=active]:bg-teal data-[state=active]:text-cream"
-          >
-            Passados ({pastAppointments.length})
-          </TabsTrigger>
-          <TabsTrigger 
-            value="cancelled" 
-            className="data-[state=active]:bg-teal data-[state=active]:text-cream"
-          >
-            Cancelados ({cancelledAppointments.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Content Tabs */}
+      <div>
+        <div className="mb-6 border-b border-sky/20">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setActiveTab("appointments")} 
+              className={`pb-2 px-1 font-medium ${activeTab === "appointments" 
+                ? "text-teal border-b-2 border-teal" 
+                : "text-cream/70 hover:text-cream"}`}
+            >
+              Agendamentos
+            </button>
+            <button
+              onClick={() => setActiveTab("settings")} 
+              className={`pb-2 px-1 font-medium ${activeTab === "settings" 
+                ? "text-teal border-b-2 border-teal" 
+                : "text-cream/70 hover:text-cream"}`}
+            >
+              Configurações
+            </button>
+          </div>
+        </div>
         
-        <TabsContent value="upcoming" className="mt-4">
-          {upcomingAppointments.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingAppointments.map(appointment => (
-                <AppointmentCard 
-                  key={appointment.id} 
-                  appointment={appointment} 
-                  getStatusColor={getStatusColor}
-                  getStatusText={getStatusText}
-                  formatAppointmentDate={formatAppointmentDate}
+        {activeTab === "appointments" ? (
+          <>
+            {/* Search and filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-cream/50 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por cliente ou serviço..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-navy-light border-sky/30 text-cream placeholder:text-cream/50"
                 />
-              ))}
+                {searchTerm && (
+                  <button 
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-cream/50 hover:text-cream"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <Button variant="outline" className="border-sky/30 text-cream hover:bg-sky/10">
+                <Filter className="mr-2 h-4 w-4" /> Filtrar
+              </Button>
+              <Button variant="outline" className="border-sky/30 text-cream hover:bg-sky/10">
+                <Calendar className="mr-2 h-4 w-4" /> Por data
+              </Button>
             </div>
-          ) : (
-            <EmptyState message="Não há agendamentos futuros." />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="past" className="mt-4">
-          {pastAppointments.length > 0 ? (
-            <div className="space-y-4">
-              {pastAppointments.map(appointment => (
-                <AppointmentCard 
-                  key={appointment.id} 
-                  appointment={appointment} 
-                  getStatusColor={getStatusColor}
-                  getStatusText={getStatusText}
-                  formatAppointmentDate={formatAppointmentDate}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState message="Não há agendamentos passados." />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="cancelled" className="mt-4">
-          {cancelledAppointments.length > 0 ? (
-            <div className="space-y-4">
-              {cancelledAppointments.map(appointment => (
-                <AppointmentCard 
-                  key={appointment.id} 
-                  appointment={appointment} 
-                  getStatusColor={getStatusColor}
-                  getStatusText={getStatusText}
-                  formatAppointmentDate={formatAppointmentDate}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState message="Não há agendamentos cancelados." />
-          )}
-        </TabsContent>
-      </Tabs>
+
+            {/* Appointment tabs */}
+            <Tabs defaultValue="upcoming" className="w-full mt-6">
+              <TabsList className="grid grid-cols-3 bg-navy-light">
+                <TabsTrigger 
+                  value="upcoming" 
+                  className="data-[state=active]:bg-teal data-[state=active]:text-cream"
+                >
+                  Próximos ({upcomingAppointments.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="past" 
+                  className="data-[state=active]:bg-teal data-[state=active]:text-cream"
+                >
+                  Passados ({pastAppointments.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="cancelled" 
+                  className="data-[state=active]:bg-teal data-[state=active]:text-cream"
+                >
+                  Cancelados ({cancelledAppointments.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upcoming" className="mt-4">
+                {upcomingAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {upcomingAppointments.map(appointment => (
+                      <AppointmentCard 
+                        key={appointment.id} 
+                        appointment={appointment} 
+                        getStatusColor={getStatusColor}
+                        getStatusText={getStatusText}
+                        formatAppointmentDate={formatAppointmentDate}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="Não há agendamentos futuros." />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="past" className="mt-4">
+                {pastAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {pastAppointments.map(appointment => (
+                      <AppointmentCard 
+                        key={appointment.id} 
+                        appointment={appointment} 
+                        getStatusColor={getStatusColor}
+                        getStatusText={getStatusText}
+                        formatAppointmentDate={formatAppointmentDate}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="Não há agendamentos passados." />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="cancelled" className="mt-4">
+                {cancelledAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {cancelledAppointments.map(appointment => (
+                      <AppointmentCard 
+                        key={appointment.id} 
+                        appointment={appointment} 
+                        getStatusColor={getStatusColor}
+                        getStatusText={getStatusText}
+                        formatAppointmentDate={formatAppointmentDate}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="Não há agendamentos cancelados." />
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <NotificationConfig />
+            
+            {/* Counter for free appointments limit */}
+            <Card className="bg-navy-light border-sky/20 h-fit">
+              <CardContent className="p-5">
+                <h3 className="text-lg font-medium text-cream mb-4">Uso do Plano Gratuito</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-cream/80">Agendamentos usados</span>
+                    <span className="text-cream font-medium">28/50</span>
+                  </div>
+                  <div className="h-2 bg-navy rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-teal" 
+                      style={{ width: "56%" }} 
+                    />
+                  </div>
+                  <p className="text-xs text-cream/60 pt-1">
+                    22 agendamentos restantes no plano gratuito
+                  </p>
+                  
+                  <div className="mt-6 pt-4 border-t border-sky/20">
+                    <Button 
+                      className="w-full bg-teal hover:bg-teal-light text-cream"
+                    >
+                      Atualizar para Plano Premium
+                    </Button>
+                    <p className="text-center text-xs text-cream/60 mt-2">
+                      R$ 49,90/mês • Agendamentos ilimitados
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
