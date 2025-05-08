@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Search, Filter, Plus, Clock, User, X } from "lucide-react";
+import { Calendar, Search, Filter, Plus, Clock, User, X, Bell } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
