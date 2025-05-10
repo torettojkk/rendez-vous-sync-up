@@ -14,6 +14,8 @@ import EstablishmentLayout from "./components/EstablishmentLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
+import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
 import Clients from "./pages/Clients";
 import NotFound from "./pages/NotFound";
 
@@ -23,6 +25,8 @@ import EstablishmentsPage from "./pages/ceo/Establishments";
 
 // Páginas do Estabelecimento
 import EstablishmentDashboard from "./pages/establishment/Dashboard";
+import EstablishmentServices from "./pages/establishment/Services";
+import EstablishmentSettings from "./pages/establishment/Settings";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +55,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["client"]}>
                   <Layout><Appointments /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute allowedRoles={["client"]}>
+                  <Layout><Profile /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <ProtectedRoute allowedRoles={["client"]}>
+                  <Layout><Notifications /></Layout>
                 </ProtectedRoute>
               } 
             />
@@ -142,20 +162,20 @@ const App = () => (
               path="/establishment/services" 
               element={
                 <ProtectedRoute allowedRoles={["establishment"]}>
-                  <EstablishmentLayout><NotFound /></EstablishmentLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/establishment/notifications" 
-              element={
-                <ProtectedRoute allowedRoles={["establishment"]}>
-                  <EstablishmentLayout><NotFound /></EstablishmentLayout>
+                  <EstablishmentLayout><EstablishmentServices /></EstablishmentLayout>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/establishment/settings" 
+              element={
+                <ProtectedRoute allowedRoles={["establishment"]}>
+                  <EstablishmentLayout><EstablishmentSettings /></EstablishmentLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/establishment/notifications" 
               element={
                 <ProtectedRoute allowedRoles={["establishment"]}>
                   <EstablishmentLayout><NotFound /></EstablishmentLayout>
