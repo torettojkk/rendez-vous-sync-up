@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Building,
   DollarSign,
-  FileBar
+  FileSpreadsheet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
@@ -38,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, userName }) => {
           { icon: Building, label: "Estabelecimentos", path: "/ceo/establishments" },
           { icon: Users, label: "Usuários", path: "/ceo/users" },
           { icon: DollarSign, label: "Financeiro", path: "/ceo/finance" },
-          { icon: FileBar, label: "Relatórios", path: "/ceo/reports" },
+          { icon: FileSpreadsheet, label: "Relatórios", path: "/ceo/reports" },
           { icon: Settings, label: "Configurações", path: "/ceo/settings" },
         ];
       case "establishment":
