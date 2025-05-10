@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, UserRole } from "../types/user";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
+  signUp: (email: string, password: string, name: string, inviteCode?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,47 +21,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Aqui verificaríamos se há um usuário salvo no localStorage
-    // e validaríamos sua sessão com o backend
-    const storedUser = localStorage.getItem("user");
-    
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.removeItem("user");
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.name,
+          email: session.user.email!,
+          role: session.user.user_metadata.role as UserRole,
+          establishmentId: session.user.user_metadata.establishmentId
+        });
       }
-    }
-    
-    setLoading(false);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.name,
+          email: session.user.email!,
+          role: session.user.user_metadata.role as UserRole,
+          establishmentId: session.user.user_metadata.establishmentId
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      // Simulação de login - em um app real, faria uma chamada API
       setLoading(true);
-      
-      // Simulação de resposta de API
-      // No futuro, isso viria do backend
-      const mockUsers = [
-        { id: "1", name: "Admin CEO", email: "admin@example.com", role: "ceo" as UserRole },
-        { id: "2", name: "Salão Exemplo", email: "salao@example.com", role: "establishment" as UserRole, establishmentId: "est1" },
-        { id: "3", name: "Cliente Teste", email: "cliente@example.com", role: "client" as UserRole }
-      ];
-      
-      const foundUser = mockUsers.find(u => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error("Usuário não encontrado");
-      }
-      
-      // Em um app real, verificaríamos a senha aqui
-      
-      setUser(foundUser);
-      localStorage.setItem("user", JSON.stringify(foundUser));
-      
-      // Redirecionar com base no tipo de usuário
-      switch (foundUser.role) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      const user = data.user;
+      const role = user.user_metadata.role as UserRole;
+
+      // Redirect based on user role
+      switch (role) {
         case "ceo":
           navigate("/ceo/dashboard");
           break;
@@ -68,21 +75,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           navigate("/establishment/dashboard");
           break;
         case "client":
-          navigate("/dashboard"); // ou uma rota específica para clientes
+          navigate("/dashboard");
           break;
       }
-      
     } catch (error) {
-      console.error("Erro de login:", error);
+      console.error("Login error:", error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
+  const signUp = async (email: string, password: string, name: string, inviteCode?: string) => {
+    try {
+      setLoading(true);
+
+      // If invite code exists, validate it first
+      let establishmentId: string | undefined;
+      if (inviteCode) {
+        const { data: invite, error: inviteError } = await supabase
+          .from('invites')
+          .select('establishment_id')
+          .eq('code', inviteCode)
+          .eq('status', 'pending')
+          .single();
+
+        if (inviteError || !invite) {
+          throw new Error('Invalid or expired invite code');
+        }
+        establishmentId = invite.establishment_id;
+      }
+
+      // Sign up user
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'client',
+            establishmentId
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // If signing up with invite, create establishment-client relationship
+      if (establishmentId && data.user) {
+        const { error: relationError } = await supabase
+          .from('establishment_clients')
+          .insert({
+            establishment_id: establishmentId,
+            client_id: data.user.id,
+            status: 'active'
+          });
+
+        if (relationError) throw relationError;
+
+        // Update invite status
+        await supabase
+          .from('invites')
+          .update({ status: 'accepted' })
+          .eq('code', inviteCode);
+      }
+
+      navigate("/");
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -103,7 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       login,
       logout,
-      hasRole
+      hasRole,
+      signUp
     }}>
       {children}
     </AuthContext.Provider>

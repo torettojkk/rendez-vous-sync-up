@@ -1,21 +1,32 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Mail, Lock, User } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, signUp } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const location = useLocation();
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: ""
   });
+
+  // Get invite code from URL if present
+  const inviteCode = new URLSearchParams(location.search).get("invite");
+  
+  useEffect(() => {
+    if (inviteCode) {
+      setIsLogin(false); // Show signup form if invite code is present
+    }
+  }, [inviteCode]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -33,8 +44,7 @@ const Login = () => {
         await login(formData.email, formData.password);
         toast.success("Login realizado com sucesso!");
       } else {
-        // Em um app real, enviaria os dados de registro para o backend
-        console.log("Registrando com:", formData);
+        await signUp(formData.email, formData.password, formData.name, inviteCode);
         toast.success("Conta criada com sucesso! Faça login para continuar.");
         setIsLogin(true);
       }
@@ -55,12 +65,14 @@ const Login = () => {
         <div className="flex flex-col items-center mb-6">
           <Logo className="mb-2" />
           <h1 className="text-2xl font-bold text-cream">
-            {isLogin ? "Bem-vindo de volta" : "Crie sua conta"}
+            {isLogin ? "Bem-vindo de volta" : inviteCode ? "Complete seu cadastro" : "Crie sua conta"}
           </h1>
           <p className="text-cream/70 text-sm">
             {isLogin 
               ? "Faça login para gerenciar seus agendamentos" 
-              : "Cadastre-se para começar a usar o sistema"}
+              : inviteCode
+                ? "Você foi convidado para se juntar a um estabelecimento"
+                : "Cadastre-se para começar a usar o sistema"}
           </p>
         </div>
 
@@ -134,18 +146,20 @@ const Login = () => {
           </Button>
         </form>
 
-        <div className="mt-5 text-center">
-          <p className="text-sm text-cream/70">
-            {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sky hover:text-sky-light font-medium"
-            >
-              {isLogin ? "Criar conta" : "Entrar"}
-            </button>
-          </p>
-        </div>
+        {!inviteCode && (
+          <div className="mt-5 text-center">
+            <p className="text-sm text-cream/70">
+              {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sky hover:text-sky-light font-medium"
+              >
+                {isLogin ? "Criar conta" : "Entrar"}
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
