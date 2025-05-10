@@ -136,7 +136,15 @@ const Services = () => {
     if (editingService) {
       // Update existing service
       setServices(services.map(service => 
-        service.id === editingService.id ? { ...service, ...data } : service
+        service.id === editingService.id ? { 
+          ...service, 
+          ...data,
+          // Ensure required fields are present
+          name: data.name,
+          duration: data.duration,
+          price: data.price,
+          isActive: data.isActive
+        } : service
       ));
       toast({
         title: "Serviço atualizado",
@@ -144,10 +152,14 @@ const Services = () => {
       });
     } else {
       // Create new service
-      const newService = {
+      const newService: Service = {
         id: `service-${Date.now()}`,
         establishmentId,
-        ...data
+        name: data.name,
+        description: data.description,
+        duration: data.duration,
+        price: data.price,
+        isActive: data.isActive
       };
       setServices([...services, newService]);
       toast({

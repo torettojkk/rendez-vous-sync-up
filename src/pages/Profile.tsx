@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserEdit } from "lucide-react";
+import { User, Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
@@ -79,7 +79,7 @@ const Profile = () => {
                   onClick={() => setEditing(true)}
                   className="border-sky/20 text-cream hover:bg-navy flex items-center gap-2"
                 >
-                  <UserEdit className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   <span>Editar</span>
                 </Button>
               )}
