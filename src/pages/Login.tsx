@@ -1,15 +1,16 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Mail, Lock, User } from "lucide-react";
 import Logo from "@/components/Logo";
+import { useAuth } from "../contexts/AuthContext";
 
 const Login = () => {
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -23,19 +24,28 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (isLogin) {
-      // In a real app, we'd authenticate with the backend
-      console.log("Logging in with:", formData.email);
-      toast.success("Login realizado com sucesso!");
-      navigate("/dashboard");
-    } else {
-      // In a real app, we'd create the user in the backend
-      console.log("Registering with:", formData);
-      toast.success("Conta criada com sucesso! Faça login para continuar.");
-      setIsLogin(true);
+    try {
+      if (isLogin) {
+        await login(formData.email, formData.password);
+        toast.success("Login realizado com sucesso!");
+      } else {
+        // Em um app real, enviaria os dados de registro para o backend
+        console.log("Registrando com:", formData);
+        toast.success("Conta criada com sucesso! Faça login para continuar.");
+        setIsLogin(true);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(isLogin ? 
+        "Falha no login. Verifique suas credenciais." : 
+        "Falha no cadastro. Tente novamente."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,8 +128,9 @@ const Login = () => {
           <Button 
             type="submit" 
             className="w-full bg-teal hover:bg-teal-light text-cream"
+            disabled={loading}
           >
-            {isLogin ? "Entrar" : "Criar conta"}
+            {loading ? "Processando..." : isLogin ? "Entrar" : "Criar conta"}
           </Button>
         </form>
 
