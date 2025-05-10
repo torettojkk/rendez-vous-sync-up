@@ -1,21 +1,20 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Card, 
   CardContent, 
   CardHeader, 
-  CardTitle 
+  CardTitle,
+  CardDescription
 } from "@/components/ui/card";
-import { Search, Plus, Edit, Trash2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Copy, Send } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
-  DialogFooter
+  DialogFooter 
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -25,52 +24,48 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { useSupabase } from "@/hooks/use-supabase";
 import { Establishment } from "@/types/user";
 
 const EstablishmentsPage = () => {
+  const { toast } = useToast();
+  const { createInvite } = useSupabase();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
-  
-  // Mock data - em um app real, seria carregado da API
-  const establishments: Establishment[] = [
-    {
-      id: "1",
-      name: "Salão de Beleza Encanto",
-      description: "Especializado em tratamentos capilares e design de unhas",
-      ownerId: "user1",
-      appointmentsCount: 32,
-      isPremium: true,
-      createdAt: new Date("2023-01-15"),
-      phone: "(11) 98765-4321",
-      services: [],
-      availableHours: []
-    },
-    {
-      id: "2",
-      name: "Oficina Mecânica Rápida",
-      description: "Serviços automotivos com agilidade e qualidade",
-      ownerId: "user2",
-      appointmentsCount: 48,
-      isPremium: false,
-      createdAt: new Date("2023-03-22"),
-      phone: "(11) 91234-5678",
-      services: [],
-      availableHours: []
-    },
-    {
-      id: "3",
-      name: "Clínica Fisioterapia Bem Estar",
-      description: "Tratamentos especializados em fisioterapia e reabilitação",
-      ownerId: "user3",
-      appointmentsCount: 16,
-      isPremium: true,
-      createdAt: new Date("2023-05-07"),
-      phone: "(11) 97890-1234",
-      services: [],
-      availableHours: []
+  const [establishments, setEstablishments] = useState<Establishment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [inviteData, setInviteData] = useState({
+    type: "email" as "email" | "phone",
+    contact: ""
+  });
+
+  useEffect(() => {
+    fetchEstablishments();
+  }, []);
+
+  const fetchEstablishments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('establishments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setEstablishments(data || []);
+    } catch (error) {
+      console.error('Error fetching establishments:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os estabelecimentos.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const handleNewEstablishment = () => {
     setSelectedEstablishment(null);
@@ -80,6 +75,65 @@ const EstablishmentsPage = () => {
   const handleEditEstablishment = (establishment: Establishment) => {
     setSelectedEstablishment(establishment);
     setDialogOpen(true);
+  };
+
+  const handleDeleteEstablishment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('establishments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setEstablishments(prev => prev.filter(est => est.id !== id));
+      toast({
+        title: "Estabelecimento removido",
+        description: "O estabelecimento foi removido com sucesso."
+      });
+    } catch (error) {
+      console.error('Error deleting establishment:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o estabelecimento.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleInviteClient = async (establishmentId: string) => {
+    try {
+      const { data, error } = await createInvite(
+        establishmentId,
+        inviteData.type,
+        inviteData.contact
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Convite enviado",
+        description: `Código do convite: ${data.code}`
+      });
+
+      setInviteDialogOpen(false);
+    } catch (error) {
+      console.error('Error sending invite:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar o convite.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCopyInviteLink = (establishment: Establishment) => {
+    const inviteUrl = `${window.location.origin}/?invite=${establishment.slug}`;
+    navigator.clipboard.writeText(inviteUrl);
+    toast({
+      title: "Link copiado",
+      description: "Link de convite copiado para a área de transferência."
+    });
   };
 
   const filteredEstablishments = establishments.filter(est => 
@@ -122,6 +176,7 @@ const EstablishmentsPage = () => {
             <TableHeader>
               <TableRow className="border-sky/10 hover:bg-transparent">
                 <TableHead className="text-cream/70">Nome</TableHead>
+                <TableHead className="text-cream/70">URL</TableHead>
                 <TableHead className="text-cream/70">Status</TableHead>
                 <TableHead className="text-cream/70">Agendamentos</TableHead>
                 <TableHead className="text-cream/70">Data de Cadastro</TableHead>
@@ -138,6 +193,19 @@ const EstablishmentsPage = () => {
                     <div>
                       <p className="font-medium text-cream">{establishment.name}</p>
                       <p className="text-xs text-cream/70">{establishment.phone}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="text-cream/70">{establishment.slug}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleCopyInviteLink(establishment)}
+                        className="h-6 w-6 hover:bg-sky/10"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -160,10 +228,21 @@ const EstablishmentsPage = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-cream/70">
-                    {establishment.createdAt.toLocaleDateString()}
+                    {new Date(establishment.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      <Button 
+                        size="icon" 
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedEstablishment(establishment);
+                          setInviteDialogOpen(true);
+                        }}
+                        className="hover:bg-sky/20 hover:text-cream"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
                       <Button 
                         size="icon" 
                         variant="ghost"
@@ -175,6 +254,7 @@ const EstablishmentsPage = () => {
                       <Button 
                         size="icon" 
                         variant="ghost"
+                        onClick={() => handleDeleteEstablishment(establishment.id)}
                         className="hover:bg-red-600/20 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -188,6 +268,7 @@ const EstablishmentsPage = () => {
         </CardContent>
       </Card>
 
+      {/* Establishment Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-navy-dark border-sky/10 text-cream">
           <DialogHeader>
@@ -199,21 +280,24 @@ const EstablishmentsPage = () => {
             <div className="space-y-2">
               <label className="text-sm text-cream/70">Nome</label>
               <Input 
-                defaultValue={selectedEstablishment?.name || ""} 
+                name="name"
+                defaultValue={selectedEstablishment?.name}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm text-cream/70">Descrição</label>
               <Input 
-                defaultValue={selectedEstablishment?.description || ""} 
+                name="description"
+                defaultValue={selectedEstablishment?.description}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm text-cream/70">Telefone</label>
               <Input 
-                defaultValue={selectedEstablishment?.phone || ""} 
+                name="phone"
+                defaultValue={selectedEstablishment?.phone}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
@@ -221,6 +305,7 @@ const EstablishmentsPage = () => {
               <label className="text-sm text-cream/70">Email do Proprietário</label>
               <Input 
                 type="email"
+                name="ownerEmail"
                 placeholder="email@exemplo.com"
                 className="bg-navy border-sky/20 text-cream"
               />
@@ -238,6 +323,75 @@ const EstablishmentsPage = () => {
               className="bg-teal hover:bg-teal-light text-cream"
             >
               {selectedEstablishment ? "Salvar Alterações" : "Criar Estabelecimento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="bg-navy-dark border-sky/10 text-cream">
+          <DialogHeader>
+            <DialogTitle>Convidar Cliente</DialogTitle>
+            <CardDescription className="text-cream/70">
+              Envie um convite para um cliente se juntar ao estabelecimento
+            </CardDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm text-cream/70">Tipo de Convite</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={inviteData.type === "email" ? "default" : "outline"}
+                  onClick={() => setInviteData({ ...inviteData, type: "email" })}
+                  className={inviteData.type === "email" 
+                    ? "bg-teal hover:bg-teal-light text-cream"
+                    : "border-sky/20 text-cream hover:bg-navy"
+                  }
+                >
+                  Email
+                </Button>
+                <Button
+                  variant={inviteData.type === "phone" ? "default" : "outline"}
+                  onClick={() => setInviteData({ ...inviteData, type: "phone" })}
+                  className={inviteData.type === "phone"
+                    ? "bg-teal hover:bg-teal-light text-cream"
+                    : "border-sky/20 text-cream hover:bg-navy"
+                  }
+                >
+                  Telefone
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-cream/70">
+                {inviteData.type === "email" ? "Email" : "Telefone"}
+              </label>
+              <Input
+                type={inviteData.type === "email" ? "email" : "tel"}
+                value={inviteData.contact}
+                onChange={(e) => setInviteData({ ...inviteData, contact: e.target.value })}
+                placeholder={inviteData.type === "email" 
+                  ? "cliente@exemplo.com" 
+                  : "(00) 00000-0000"
+                }
+                className="bg-navy border-sky/20 text-cream"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setInviteDialogOpen(false)}
+              className="border-sky/20 text-cream hover:bg-navy"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => selectedEstablishment && handleInviteClient(selectedEstablishment.id)}
+              className="bg-teal hover:bg-teal-light text-cream"
+            >
+              Enviar Convite
             </Button>
           </DialogFooter>
         </DialogContent>
