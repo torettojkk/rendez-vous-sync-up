@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, UserRole } from "../types/user";
@@ -91,19 +90,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
 
+      // Check if email already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        throw new Error('Este e-mail já está em uso');
+      }
+
       // If invite code exists, validate it first
       let establishmentId: string | undefined;
       if (inviteCode) {
-        // Note: In our database we're storing invite codes in the 'token' field
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
-          .select('establishment_id')
-          .eq('token', inviteCode)
+          .select('establishment_id, code')
+          .eq('code', inviteCode)
           .eq('status', 'pending')
           .single();
 
         if (inviteError || !invite) {
-          throw new Error('Invalid or expired invite code');
+          throw new Error('Código de convite inválido ou expirado');
         }
         establishmentId = invite.establishment_id;
       }
@@ -126,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If signing up with invite, create establishment-client relationship
       if (establishmentId && data.user) {
         const { error: relationError } = await supabase
-          .from('client_establishments')
+          .from('establishment_clients') // Fixed table name
           .insert({
             establishment_id: establishmentId,
             client_id: data.user.id,
@@ -139,13 +148,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase
           .from('invites')
           .update({ status: 'accepted' })
-          .eq('token', inviteCode);
+          .eq('code', inviteCode);
       }
 
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
-      throw error;
+      throw new Error(error.message || 'Erro ao criar conta');
     } finally {
       setLoading(false);
     }
