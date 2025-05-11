@@ -13,6 +13,7 @@ export interface Establishment {
   id: string;
   name: string;
   description: string;
+  slug: string; // Adding slug field
   ownerId: string; // ID do usuário que é o dono
   appointmentsCount: number; // Contador para o limite de 50 agendamentos
   isPremium: boolean;

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { supabase, EstablishmentType, InviteType, EstablishmentClientType } from '@/integrations/supabase/client';
+import { supabase, Tables } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Establishment } from '@/types/user';
 
@@ -52,14 +52,16 @@ export function useSupabase() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
       
-      const inviteData = {
+      const inviteData: any = {
         establishment_id: establishmentId,
         type,
-        [type === 'email' ? 'email' : 'phone']: contact,
         status: 'pending',
         code,
         expires_at: expiresAt.toISOString()
       };
+      
+      // Add either email or phone based on type
+      inviteData[type] = contact;
       
       const { data, error } = await supabase
         .from('invites')
@@ -69,7 +71,7 @@ export function useSupabase() {
         
       if (error) throw error;
       
-      return { code: data.code, id: data.id };
+      return { code: data?.code, id: data?.id };
     } catch (error) {
       console.error("Error creating invite:", error);
       throw error;
@@ -132,7 +134,7 @@ export function useSupabase() {
 
       if (error) throw error;
       
-      return data.map((item: any): Establishment => ({
+      return (data || []).map((item: any): Establishment => ({
         id: item.id,
         name: item.name,
         description: item.description || '',
@@ -164,7 +166,7 @@ export function useSupabase() {
 
       if (error) throw error;
       
-      return data.map((item: any): Establishment => ({
+      return (data || []).map((item: any): Establishment => ({
         id: item.id,
         name: item.name,
         description: item.description || '',

@@ -12,7 +12,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // Custom type definitions for our tables - separate from the generated types
-export type EstablishmentType = {
+export interface EstablishmentType {
   id: string;
   name: string;
   description?: string;
@@ -28,7 +28,7 @@ export type EstablishmentType = {
   updated_at: string;
 }
 
-export type InviteType = {
+export interface InviteType {
   id: string;
   establishment_id: string;
   type: 'email' | 'phone';
@@ -40,10 +40,17 @@ export type InviteType = {
   created_at: string;
 }
 
-export type EstablishmentClientType = {
+export interface EstablishmentClientType {
   id: string;
   establishment_id: string;
   client_id: string;
   status: 'active' | 'blocked';
   created_at: string;
+}
+
+// Define our database schema for TypeScript
+export type Tables = {
+  establishments: EstablishmentType;
+  invites: InviteType;
+  establishment_clients: EstablishmentClientType;
 }
