@@ -26,7 +26,7 @@ export function useSupabase() {
         id: data.id,
         name: data.name,
         description: data.description || '',
-        slug: data.unique_url || '',
+        slug: data.unique_url || '', // Map unique_url to slug
         ownerId: data.owner_id,
         appointmentsCount: data.appointments_count || 0,
         isPremium: data.is_premium || false,
@@ -137,7 +137,7 @@ export function useSupabase() {
         id: item.id,
         name: item.name,
         description: item.description || '',
-        slug: item.unique_url || '',
+        slug: item.unique_url || '', // Map unique_url to slug
         ownerId: item.owner_id,
         appointmentsCount: item.appointments_count || 0,
         isPremium: item.is_premium || false,
@@ -169,7 +169,7 @@ export function useSupabase() {
         id: item.id,
         name: item.name,
         description: item.description || '',
-        slug: item.unique_url || '',
+        slug: item.unique_url || '', // Map unique_url to slug
         ownerId: item.owner_id,
         appointmentsCount: item.appointments_count || 0,
         isPremium: item.is_premium || false,

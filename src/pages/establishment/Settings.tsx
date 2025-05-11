@@ -36,6 +36,7 @@ const Settings = () => {
     id: establishmentId,
     name: "Salão de Beleza Exemplo",
     description: "O melhor salão da cidade",
+    slug: "salao-beleza-exemplo", // Added required slug property
     ownerId: user?.id || "",
     appointmentsCount: 32,
     isPremium: false,
