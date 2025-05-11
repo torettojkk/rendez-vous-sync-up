@@ -30,7 +30,7 @@ import { Establishment } from "@/types/user";
 
 const EstablishmentsPage = () => {
   const { toast } = useToast();
-  const { createInvite } = useSupabase();
+  const { createInvite, getAllEstablishments, createEstablishment, deleteEstablishment } = useSupabase();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +41,12 @@ const EstablishmentsPage = () => {
     type: "email" as "email" | "phone",
     contact: ""
   });
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    phone: "",
+    ownerEmail: ""
+  });
 
   useEffect(() => {
     fetchEstablishments();
@@ -48,13 +54,9 @@ const EstablishmentsPage = () => {
 
   const fetchEstablishments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('establishments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setEstablishments(data || []);
+      setLoading(true);
+      const data = await getAllEstablishments();
+      setEstablishments(data);
     } catch (error) {
       console.error('Error fetching establishments:', error);
       toast({
@@ -68,24 +70,30 @@ const EstablishmentsPage = () => {
   };
 
   const handleNewEstablishment = () => {
+    setFormData({
+      name: "",
+      description: "",
+      phone: "",
+      ownerEmail: ""
+    });
     setSelectedEstablishment(null);
     setDialogOpen(true);
   };
 
   const handleEditEstablishment = (establishment: Establishment) => {
+    setFormData({
+      name: establishment.name,
+      description: establishment.description || "",
+      phone: establishment.phone || "",
+      ownerEmail: "" // Can't edit owner email once created
+    });
     setSelectedEstablishment(establishment);
     setDialogOpen(true);
   };
 
   const handleDeleteEstablishment = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('establishments')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await deleteEstablishment(id);
       setEstablishments(prev => prev.filter(est => est.id !== id));
       toast({
         title: "Estabelecimento removido",
@@ -103,20 +111,28 @@ const EstablishmentsPage = () => {
 
   const handleInviteClient = async (establishmentId: string) => {
     try {
-      const { data, error } = await createInvite(
+      if (!inviteData.contact) {
+        toast({
+          title: "Erro",
+          description: "Insira um email ou telefone válido.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { code } = await createInvite(
         establishmentId,
         inviteData.type,
         inviteData.contact
       );
 
-      if (error) throw error;
-
       toast({
         title: "Convite enviado",
-        description: `Código do convite: ${data.code}`
+        description: `Código do convite: ${code}`
       });
 
       setInviteDialogOpen(false);
+      setInviteData({ type: "email", contact: "" });
     } catch (error) {
       console.error('Error sending invite:', error);
       toast({
@@ -134,6 +150,76 @@ const EstablishmentsPage = () => {
       title: "Link copiado",
       description: "Link de convite copiado para a área de transferência."
     });
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCreateOrUpdateEstablishment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (!formData.name) {
+        toast({
+          title: "Erro",
+          description: "Nome do estabelecimento é obrigatório",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!selectedEstablishment) {
+        // Create new establishment
+        const newEstablishment = await createEstablishment({
+          name: formData.name,
+          description: formData.description,
+          phone: formData.phone,
+          ownerEmail: formData.ownerEmail,
+        });
+        
+        setEstablishments(prev => [
+          {
+            id: newEstablishment.id,
+            name: newEstablishment.name,
+            description: newEstablishment.description || '',
+            slug: newEstablishment.slug,
+            ownerId: newEstablishment.owner_id,
+            appointmentsCount: newEstablishment.appointments_count,
+            isPremium: newEstablishment.is_premium,
+            createdAt: new Date(newEstablishment.created_at),
+            phone: newEstablishment.phone,
+            services: [],
+            availableHours: []
+          }, 
+          ...prev
+        ]);
+        
+        toast({
+          title: "Estabelecimento criado",
+          description: "Estabelecimento criado com sucesso."
+        });
+      } else {
+        // Update establishment (feature not fully implemented yet)
+        toast({
+          title: "Recurso em desenvolvimento",
+          description: "A edição de estabelecimentos será implementada em breve."
+        });
+      }
+      
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating/updating establishment:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o estabelecimento.",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredEstablishments = establishments.filter(est => 
@@ -228,7 +314,7 @@ const EstablishmentsPage = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-cream/70">
-                    {new Date(establishment.createdAt).toLocaleDateString()}
+                    {establishment.createdAt.toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
@@ -276,12 +362,13 @@ const EstablishmentsPage = () => {
               {selectedEstablishment ? "Editar Estabelecimento" : "Novo Estabelecimento"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <form onSubmit={handleCreateOrUpdateEstablishment} className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm text-cream/70">Nome</label>
               <Input 
                 name="name"
-                defaultValue={selectedEstablishment?.name}
+                value={formData.name}
+                onChange={handleFormChange}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
@@ -289,7 +376,8 @@ const EstablishmentsPage = () => {
               <label className="text-sm text-cream/70">Descrição</label>
               <Input 
                 name="description"
-                defaultValue={selectedEstablishment?.description}
+                value={formData.description}
+                onChange={handleFormChange}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
@@ -297,34 +385,41 @@ const EstablishmentsPage = () => {
               <label className="text-sm text-cream/70">Telefone</label>
               <Input 
                 name="phone"
-                defaultValue={selectedEstablishment?.phone}
+                value={formData.phone}
+                onChange={handleFormChange}
                 className="bg-navy border-sky/20 text-cream"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-cream/70">Email do Proprietário</label>
-              <Input 
-                type="email"
-                name="ownerEmail"
-                placeholder="email@exemplo.com"
-                className="bg-navy border-sky/20 text-cream"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setDialogOpen(false)}
-              className="border-sky/20 text-cream hover:bg-navy"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              className="bg-teal hover:bg-teal-light text-cream"
-            >
-              {selectedEstablishment ? "Salvar Alterações" : "Criar Estabelecimento"}
-            </Button>
-          </DialogFooter>
+            {!selectedEstablishment && (
+              <div className="space-y-2">
+                <label className="text-sm text-cream/70">Email do Proprietário</label>
+                <Input 
+                  type="email"
+                  name="ownerEmail"
+                  value={formData.ownerEmail}
+                  onChange={handleFormChange}
+                  placeholder="email@exemplo.com"
+                  className="bg-navy border-sky/20 text-cream"
+                />
+              </div>
+            )}
+            <DialogFooter>
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => setDialogOpen(false)}
+                className="border-sky/20 text-cream hover:bg-navy"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                className="bg-teal hover:bg-teal-light text-cream"
+              >
+                {selectedEstablishment ? "Salvar Alterações" : "Criar Estabelecimento"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -342,6 +437,7 @@ const EstablishmentsPage = () => {
               <label className="text-sm text-cream/70">Tipo de Convite</label>
               <div className="flex gap-2">
                 <Button
+                  type="button"
                   variant={inviteData.type === "email" ? "default" : "outline"}
                   onClick={() => setInviteData({ ...inviteData, type: "email" })}
                   className={inviteData.type === "email" 
@@ -352,6 +448,7 @@ const EstablishmentsPage = () => {
                   Email
                 </Button>
                 <Button
+                  type="button"
                   variant={inviteData.type === "phone" ? "default" : "outline"}
                   onClick={() => setInviteData({ ...inviteData, type: "phone" })}
                   className={inviteData.type === "phone"

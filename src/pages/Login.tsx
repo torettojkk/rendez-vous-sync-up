@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,13 +6,16 @@ import { toast } from "sonner";
 import { Mail, Lock, User } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useAuth } from "../contexts/AuthContext";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useSupabase } from "@/hooks/use-supabase";
 
 const Login = () => {
-  const { login, signUp } = useAuth();
+  const { login, signUp, isAuthenticated } = useAuth();
+  const { getEstablishmentBySlug, acceptInvite } = useSupabase();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     email: "",
@@ -19,14 +23,38 @@ const Login = () => {
     name: ""
   });
 
-  // Get invite code from URL if present
-  const inviteCode = new URLSearchParams(location.search).get("invite");
+  // Get invite slug from URL if present
+  const inviteSlug = new URLSearchParams(location.search).get("invite");
+  const [establishmentData, setEstablishmentData] = useState<{ id: string, name: string } | null>(null);
   
   useEffect(() => {
-    if (inviteCode) {
-      setIsLogin(false); // Show signup form if invite code is present
+    // If user is already authenticated, redirect to appropriate dashboard
+    if (isAuthenticated) {
+      navigate('/dashboard');
+      return;
     }
-  }, [inviteCode]);
+    
+    // If there's an invite parameter, fetch the establishment data
+    const fetchEstablishment = async () => {
+      if (inviteSlug) {
+        try {
+          const establishment = await getEstablishmentBySlug(inviteSlug);
+          if (establishment) {
+            setEstablishmentData({
+              id: establishment.id,
+              name: establishment.name
+            });
+            setIsLogin(false); // Show signup form if invite is present
+          }
+        } catch (error) {
+          console.error("Error fetching establishment:", error);
+          toast.error("Convite inválido ou expirado.");
+        }
+      }
+    };
+    
+    fetchEstablishment();
+  }, [inviteSlug, isAuthenticated]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -43,9 +71,25 @@ const Login = () => {
       if (isLogin) {
         await login(formData.email, formData.password);
         toast.success("Login realizado com sucesso!");
+        // Redirect handled by AuthContext
       } else {
-        await signUp(formData.email, formData.password, formData.name, inviteCode);
-        toast.success("Conta criada com sucesso! Faça login para continuar.");
+        // Sign up the user
+        const user = await signUp(formData.email, formData.password, formData.name);
+        
+        // If there's an establishment invite, associate the user with it
+        if (user && establishmentData) {
+          try {
+            // Create connection between user and establishment
+            await acceptInvite(inviteSlug!, establishmentData.id);
+            toast.success(`Conta criada e associada ao estabelecimento ${establishmentData.name} com sucesso!`);
+          } catch (error) {
+            console.error("Error associating user with establishment:", error);
+            toast.error("Erro ao associar usuário ao estabelecimento. Tente novamente mais tarde.");
+          }
+        } else {
+          toast.success("Conta criada com sucesso! Faça login para continuar.");
+        }
+        
         setIsLogin(true);
       }
     } catch (error) {
@@ -65,13 +109,15 @@ const Login = () => {
         <div className="flex flex-col items-center mb-6">
           <Logo className="mb-2" />
           <h1 className="text-2xl font-bold text-cream">
-            {isLogin ? "Bem-vindo de volta" : inviteCode ? "Complete seu cadastro" : "Crie sua conta"}
+            {isLogin ? "Bem-vindo de volta" : establishmentData 
+              ? `Junte-se a ${establishmentData.name}`
+              : "Crie sua conta"}
           </h1>
           <p className="text-cream/70 text-sm">
             {isLogin 
               ? "Faça login para gerenciar seus agendamentos" 
-              : inviteCode
-                ? "Você foi convidado para se juntar a um estabelecimento"
+              : establishmentData
+                ? "Complete seu cadastro para se juntar ao estabelecimento"
                 : "Cadastre-se para começar a usar o sistema"}
           </p>
         </div>
@@ -146,7 +192,7 @@ const Login = () => {
           </Button>
         </form>
 
-        {!inviteCode && (
+        {!establishmentData && (
           <div className="mt-5 text-center">
             <p className="text-sm text-cream/70">
               {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}

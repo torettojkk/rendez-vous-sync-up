@@ -11,7 +11,7 @@ const Index = () => {
     if (loading) return;
     
     if (isAuthenticated && user) {
-      // Redirecionar com base no tipo de usuário
+      // Redirect based on user role
       switch (user.role) {
         case "ceo":
           navigate("/ceo/dashboard");
@@ -26,7 +26,7 @@ const Index = () => {
           navigate("/dashboard");
       }
     } else {
-      // Se não estiver autenticado, redirecionar para o login
+      // If not authenticated, redirect to login
       navigate("/");
     }
   }, [navigate, isAuthenticated, user, loading]);
