@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,17 +183,18 @@ const EstablishmentsPage = () => {
           ownerEmail: formData.ownerEmail,
         });
         
+        // Fix: Map unique_url to slug when creating a new establishment in the UI
         setEstablishments(prev => [
           {
             id: newEstablishment.id,
             name: newEstablishment.name,
             description: newEstablishment.description || '',
-            slug: newEstablishment.slug,
+            slug: newEstablishment.unique_url || '', // Use unique_url as slug
             ownerId: newEstablishment.owner_id,
-            appointmentsCount: newEstablishment.appointments_count,
-            isPremium: newEstablishment.is_premium,
+            appointmentsCount: newEstablishment.appointments_count || 0,
+            isPremium: newEstablishment.is_premium || false,
             createdAt: new Date(newEstablishment.created_at),
-            phone: newEstablishment.phone,
+            phone: newEstablishment.phone || undefined,
             services: [],
             availableHours: []
           }, 
