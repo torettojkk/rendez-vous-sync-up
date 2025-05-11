@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { supabase, Tables } from '@/integrations/supabase/client';
+import { supabase, EstablishmentType } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Establishment } from '@/types/user';
 
@@ -134,7 +134,7 @@ export function useSupabase() {
 
       if (error) throw error;
       
-      return (data || []).map((item: any): Establishment => ({
+      return (data || []).map((item: EstablishmentType): Establishment => ({
         id: item.id,
         name: item.name,
         description: item.description || '',
@@ -166,7 +166,7 @@ export function useSupabase() {
 
       if (error) throw error;
       
-      return (data || []).map((item: any): Establishment => ({
+      return (data || []).map((item: EstablishmentType): Establishment => ({
         id: item.id,
         name: item.name,
         description: item.description || '',
