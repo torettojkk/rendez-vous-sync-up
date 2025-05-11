@@ -94,10 +94,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If invite code exists, validate it first
       let establishmentId: string | undefined;
       if (inviteCode) {
+        // Note: In our database we're storing invite codes in the 'token' field
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
           .select('establishment_id')
-          .eq('code', inviteCode)
+          .eq('token', inviteCode)
           .eq('status', 'pending')
           .single();
 
@@ -125,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If signing up with invite, create establishment-client relationship
       if (establishmentId && data.user) {
         const { error: relationError } = await supabase
-          .from('establishment_clients')
+          .from('client_establishments')
           .insert({
             establishment_id: establishmentId,
             client_id: data.user.id,
@@ -138,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase
           .from('invites')
           .update({ status: 'accepted' })
-          .eq('code', inviteCode);
+          .eq('token', inviteCode);
       }
 
       navigate("/");

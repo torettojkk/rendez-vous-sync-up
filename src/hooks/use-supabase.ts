@@ -15,7 +15,7 @@ export function useSupabase() {
       const { data, error } = await supabase
         .from('establishments')
         .select('*')
-        .eq('slug', slug)
+        .eq('unique_url', slug)
         .single();
 
       if (error) throw error;
@@ -26,14 +26,14 @@ export function useSupabase() {
         id: data.id,
         name: data.name,
         description: data.description || '',
-        slug: data.slug,
+        slug: data.unique_url || '',
         ownerId: data.owner_id,
-        appointmentsCount: data.appointments_count,
-        isPremium: data.is_premium,
+        appointmentsCount: data.appointments_count || 0,
+        isPremium: data.is_premium || false,
         createdAt: new Date(data.created_at),
         address: data.address,
         phone: data.phone,
-        logo: data.logo_url,
+        logo: data.logo,
         services: [],
         availableHours: [],
         cancellationPolicy: data.cancellation_policy
@@ -48,15 +48,14 @@ export function useSupabase() {
   const createInvite = async (establishmentId: string, type: 'email' | 'phone', contact: string) => {
     try {
       // Generate a random 6-digit code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const token = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
       
       const inviteData: any = {
         establishment_id: establishmentId,
-        type,
         status: 'pending',
-        code,
+        token,
         expires_at: expiresAt.toISOString()
       };
       
@@ -71,7 +70,7 @@ export function useSupabase() {
         
       if (error) throw error;
       
-      return { code: data?.code, id: data?.id };
+      return { code: data?.token, id: data?.id };
     } catch (error) {
       console.error("Error creating invite:", error);
       throw error;
@@ -87,7 +86,7 @@ export function useSupabase() {
       const { data: invite, error: inviteError } = await supabase
         .from('invites')
         .select('*')
-        .eq('code', inviteCode)
+        .eq('token', inviteCode)
         .eq('establishment_id', establishmentId)
         .eq('status', 'pending')
         .single();
@@ -96,7 +95,7 @@ export function useSupabase() {
 
       // Create relationship between client and establishment
       const { error: relationError } = await supabase
-        .from('establishment_clients')
+        .from('client_establishments')
         .insert({
           establishment_id: establishmentId,
           client_id: user.id,
@@ -127,10 +126,10 @@ export function useSupabase() {
         .from('establishments')
         .select(`
           *,
-          establishment_clients!inner(status)
+          client_establishments!inner(*)
         `)
-        .eq('establishment_clients.client_id', user.id)
-        .eq('establishment_clients.status', 'active');
+        .eq('client_establishments.client_id', user.id)
+        .eq('client_establishments.status', 'active');
 
       if (error) throw error;
       
@@ -138,17 +137,17 @@ export function useSupabase() {
         id: item.id,
         name: item.name,
         description: item.description || '',
-        slug: item.slug,
+        slug: item.unique_url || '',
         ownerId: item.owner_id,
-        appointmentsCount: item.appointments_count,
-        isPremium: item.is_premium,
+        appointmentsCount: item.appointments_count || 0,
+        isPremium: item.is_premium || false,
         createdAt: new Date(item.created_at),
-        address: item.address,
-        phone: item.phone,
-        logo: item.logo_url,
+        address: item.address || undefined,
+        phone: item.phone || undefined,
+        logo: item.logo || undefined,
         services: [],
         availableHours: [],
-        cancellationPolicy: item.cancellation_policy
+        cancellationPolicy: item.cancellation_policy || undefined
       }));
     } catch (error) {
       console.error("Error fetching user establishments:", error);
@@ -170,17 +169,17 @@ export function useSupabase() {
         id: item.id,
         name: item.name,
         description: item.description || '',
-        slug: item.slug,
+        slug: item.unique_url || '',
         ownerId: item.owner_id,
-        appointmentsCount: item.appointments_count,
-        isPremium: item.is_premium,
+        appointmentsCount: item.appointments_count || 0,
+        isPremium: item.is_premium || false,
         createdAt: new Date(item.created_at),
-        address: item.address,
-        phone: item.phone,
-        logo: item.logo_url,
+        address: item.address || undefined,
+        phone: item.phone || undefined,
+        logo: item.logo || undefined,
         services: [],
         availableHours: [],
-        cancellationPolicy: item.cancellation_policy
+        cancellationPolicy: item.cancellation_policy || undefined
       }));
     } catch (error) {
       console.error("Error fetching all establishments:", error);
@@ -198,18 +197,11 @@ export function useSupabase() {
     try {
       if (!user?.id) throw new Error('User not authenticated');
       
-      // Generate a unique slug based on the name
-      const slug = data.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-      
       const establishmentData = {
         name: data.name,
         description: data.description,
         phone: data.phone,
         owner_id: user.id,
-        slug: `${slug}-${Math.random().toString(36).substring(2, 7)}`,
         is_premium: false,
         appointments_count: 0
       };

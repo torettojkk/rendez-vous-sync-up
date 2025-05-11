@@ -6,16 +6,16 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  establishmentId?: string; // Para usuários do tipo "establishment"
+  establishmentId?: string; // For establishment users
 }
 
 export interface Establishment {
   id: string;
   name: string;
   description: string;
-  slug: string; // Adding slug field
-  ownerId: string; // ID do usuário que é o dono
-  appointmentsCount: number; // Contador para o limite de 50 agendamentos
+  slug: string; // Using unique_url as slug
+  ownerId: string;
+  appointmentsCount: number;
   isPremium: boolean;
   createdAt: Date;
   address?: string;
@@ -31,7 +31,7 @@ export interface Service {
   establishmentId: string;
   name: string;
   description?: string;
-  duration: number; // em minutos
+  duration: number; // in minutes
   price: number;
   isActive: boolean;
 }
@@ -39,8 +39,8 @@ export interface Service {
 export interface AvailableHour {
   id: string;
   establishmentId: string;
-  day: number; // 0-6, onde 0 é domingo
-  startTime: string; // formato "HH:MM"
-  endTime: string; // formato "HH:MM"
-  interval: number; // intervalo entre agendamentos em minutos
+  day: number; // 0-6, where 0 is Sunday
+  startTime: string; // format "HH:MM"
+  endTime: string; // format "HH:MM"
+  interval: number; // interval between appointments in minutes
 }

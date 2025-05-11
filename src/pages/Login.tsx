@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,21 +73,11 @@ const Login = () => {
         // Redirect handled by AuthContext
       } else {
         // Sign up the user
-        const user = await signUp(formData.email, formData.password, formData.name);
+        await signUp(formData.email, formData.password, formData.name, inviteSlug);
         
-        // If there's an establishment invite, associate the user with it
-        if (user && establishmentData) {
-          try {
-            // Create connection between user and establishment
-            await acceptInvite(inviteSlug!, establishmentData.id);
-            toast.success(`Conta criada e associada ao estabelecimento ${establishmentData.name} com sucesso!`);
-          } catch (error) {
-            console.error("Error associating user with establishment:", error);
-            toast.error("Erro ao associar usuário ao estabelecimento. Tente novamente mais tarde.");
-          }
-        } else {
-          toast.success("Conta criada com sucesso! Faça login para continuar.");
-        }
+        toast.success(establishmentData 
+          ? `Conta criada e associada ao estabelecimento ${establishmentData.name} com sucesso!` 
+          : "Conta criada com sucesso! Faça login para continuar.");
         
         setIsLogin(true);
       }
